@@ -16,4 +16,4 @@ setup(
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Software Development :: Libraries :: Python Modules'],
     packages=find_packages() + ['twisted.plugins'],
-    install_requires=['Twisted >= 14.0.0'])
+    install_requires=['Twisted[tls] >= 15.0.0'])
