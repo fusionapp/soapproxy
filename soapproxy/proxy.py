@@ -1,7 +1,8 @@
 from OpenSSL import SSL
 from twisted.internet import reactor
 from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
-from twisted.internet.ssl import CertificateOptions
+from twisted.internet.ssl import PrivateCertificate, CertificateOptions
+from twisted.python.filepath import FilePath
 from twisted.python.urlpath import URLPath
 from twisted.web.client import (
     Agent, FileBodyProducer, HTTPConnectionPool, PartialDownloadError,
@@ -33,8 +34,12 @@ class InsecureTLSOptions(object):
     """
     TLS client creator that does not verify the peer.
     """
-    def __init__(self):
-        self._ctx = CertificateOptions().getContext()
+    def __init__(self, clientCert=None):
+        if clientCert is None:
+            options = CertificateOptions()
+        else:
+            options = clientCert.options()
+        self._ctx = options.getContext()
 
 
     def clientConnectionForTLS(self, tlsProtocol):
@@ -50,14 +55,20 @@ class ProxyResource(Resource):
     """
     isLeaf = True
 
-    def __init__(self, uri, verify, timeout=600, reactor=reactor):
+    def __init__(self, uri, verify, timeout=600, reactor=reactor, clientCert=None):
         Resource.__init__(self)
         self._uri = URLPath.fromString(uri)
         self._verify = verify
         self._timeout = timeout
         self._reactor = reactor
         pool = HTTPConnectionPool(reactor)
-        self._agent = Agent(reactor, StupidPolicyForHTTPS(InsecureTLSOptions()), pool=pool)
+        if clientCert is not None:
+            clientCert = PrivateCertificate.loadPEM(
+                FilePath(clientCert).getContent())
+        self._agent = Agent(
+            reactor,
+            StupidPolicyForHTTPS(InsecureTLSOptions(clientCert)),
+            pool=pool)
 
 
     def render(self, request):

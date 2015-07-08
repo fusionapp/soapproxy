@@ -13,6 +13,7 @@ class ProxyOptions(Options):
     optFlags = [['no-verify-tls', None, 'Disable TLS verification']]
     optParameters = [['endpoint', 'p', None, 'The endpoint to listen on.'],
                      ['uri', 'u', None, 'The URI to proxy to.'],
+                     ['client-cert', 'c', None, 'A TLS client certificate and key to use.'],
                     ]
 
 
@@ -25,5 +26,7 @@ class ServiceMaker(object):
 
     def makeService(self, options):
         site = Site(ProxyResource(
-            uri=options['uri'], verify=not options['no-verify-tls']))
+            uri=options['uri'],
+            verify=not options['no-verify-tls'],
+            clientCert=options['client-cert']))
         return service(options['endpoint'], site)
