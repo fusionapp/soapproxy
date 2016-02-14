@@ -108,7 +108,6 @@ class ProxyResource(Resource):
             body = None
         else:
             body = FileBodyProducer(request.content)
-        print request.requestHeaders.getRawHeaders('content-type')
         d = self._agent.request(
             request.method,
             str(uri),
