@@ -1,3 +1,5 @@
+from lxml.builder import ElementMaker, E
+from lxml.etree import tostring, QName
 from OpenSSL import SSL
 from twisted.internet import reactor
 from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
@@ -12,6 +14,10 @@ from twisted.web.iweb import IPolicyForHTTPS
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from zope.interface import implementer
+
+
+SOAP_ENV_URI = 'http://schemas.xmlsoap.org/soap/envelope/'
+SOAP_ENV = ElementMaker(namespace=SOAP_ENV_URI, nsmap={'soapenv': SOAP_ENV_URI})
 
 
 
@@ -89,7 +95,16 @@ class ProxyResource(Resource):
 
         def writeError(f):
             request.setResponseCode(500)
-            request.write(f.getTraceback())
+            request.setHeader('content-type', 'application/xml')
+            faultcode = E.faultcode()
+            faultcode.text = QName(SOAP_ENV_URI, 'Server')
+            fault = SOAP_ENV.Fault(
+                faultcode,
+                E.faultstring(f.getErrorMessage()),
+                E.faultactor(request.uri),
+                E.detail(
+                    E.traceback(f.getTraceback())))
+            request.write(tostring(SOAP_ENV.Envelope(fault)))
             request.finish()
 
         def write(r):
