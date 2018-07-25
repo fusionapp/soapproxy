@@ -1,3 +1,5 @@
+from lxml.builder import ElementMaker, E
+from lxml.etree import tostring
 from OpenSSL import SSL
 from twisted.internet import reactor
 from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
@@ -12,6 +14,28 @@ from twisted.web.iweb import IPolicyForHTTPS
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from zope.interface import implementer
+
+
+
+SOAP_ENV = ElementMaker(
+    namespace='http://schemas.xmlsoap.org/soap/envelope/',
+    nsmap={'soapenv': 'http://schemas.xmlsoap.org/soap/envelope/'})
+
+
+
+def qnameid(ns, localpart):
+    """
+    Derive a QName identifier, as text, using an `ElementMaker` instance for
+    the namespace prefix and a local name.
+    """
+    if ns._namespace is None:
+        return localpart
+    needle = ns._namespace[1:-1]
+    for prefix, uri in ns._nsmap.items():
+        if uri == needle:
+            return u'{}:{}'.format(prefix, localpart)
+    else:
+        raise ValueError('Namespace missing', needle)
 
 
 
@@ -89,7 +113,14 @@ class ProxyResource(Resource):
 
         def writeError(f):
             request.setResponseCode(500)
-            request.write(f.getTraceback())
+            request.setHeader('content-type', 'application/xml')
+            fault = SOAP_ENV.Fault(
+                E.faultcode(qnameid(SOAP_ENV, 'Server')),
+                E.faultstring(f.getErrorMessage()),
+                E.faultactor(request.uri),
+                E.detail(
+                    E.traceback(f.getTraceback())))
+            request.write(tostring(SOAP_ENV.Envelope(fault)))
             request.finish()
 
         def write(r):
