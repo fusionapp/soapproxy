@@ -97,13 +97,13 @@ class ProxyResource(Resource):
             request.setResponseCode(500)
             request.setHeader('content-type', 'application/xml')
             faultcode = E.faultcode()
-            faultcode.text = QName(SOAP_ENV_URI, 'Server')
             fault = SOAP_ENV.Fault(
                 faultcode,
                 E.faultstring(f.getErrorMessage()),
                 E.faultactor(request.uri),
                 E.detail(
                     E.traceback(f.getTraceback())))
+            faultcode.text = QName(SOAP_ENV_URI, 'Server')
             request.write(tostring(SOAP_ENV.Envelope(fault)))
             request.finish()
 
